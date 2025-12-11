@@ -172,7 +172,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
           .astype(str)
           .str.strip()
           .str.lower()
-          .isin(["sea", "sea group", "sea limited", "sea ltd", "sea."])
+          .isin(["sea", "sea group", "sea limited", "sea ltd"])
     )
     df.loc[sea_mask, "Company Full Name"] = "Sea Limited"
 
