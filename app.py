@@ -136,6 +136,23 @@ def normalize_pr(value):
     else:
         return val.upper() if val.isalpha() else val
 
+def normalize_company(value):
+    val = str(value).strip().lower()
+    
+    sea_variants = {
+        "sea",
+        "sea group",
+        "sea limited",
+        "sea ltd",
+        "sea.",
+    }
+
+    if val in sea_variants:
+        return "Sea Limited"
+    else:
+        return val.upper() if val.isalpha() else val
+
+
 def safe_str(cell):
     """Return a trimmed string or empty string if cell is None/NaN."""
     return str(cell or "").strip()
@@ -157,6 +174,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
           .astype(str)
           .str.strip()
           .apply(smart_title_case)
+          .apply(normalize_company)     # ← INSERT HERE
           # Title-case any text inside parentheses: (logistics) -> (Logistics)
           .str.replace(r"\(([^)]+)\)", lambda m: f"({m.group(1).title()})", regex=True)
           # Force specific acronyms like MFI
