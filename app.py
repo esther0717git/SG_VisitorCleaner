@@ -168,6 +168,12 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     # --- Apply manual company name corrections (case-insensitive) ---
     df["Company Full Name"] = (
         df["Company Full Name"]
+          # Sea / Sea Group → Sea Limited
+          .str.replace(
+              r"(?i)^sea(\s+group)?$",
+              "Sea Limited",
+              regex=True
+          )        
           # Atlas M&E Services
           .str.replace(
               r"(?i)^atlas m[&e]+ services pte\.? ltd\.?$",
