@@ -187,6 +187,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               regex=True
           )
     )
+    st.write("DEBUG:", df["Company Full Name"].unique())
 
     # --- Force Sea / Sea Group -> Sea Limited (no matter the casing) ---
     company_norm = df["Company Full Name"].astype(str).str.strip().str.lower()
