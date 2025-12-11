@@ -186,18 +186,6 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               "Johnjohn RRR Pte. Ltd.",
               regex=True
           )
-          # Sea Group → Sea Limited
-        .str.replace(
-            r"(?i)^sea group$",
-            "Sea Limited",
-            regex=True,    
-        )
-         # Sea → Sea Limited
-        .str.replace(
-            r"(?i)^sea$",
-            "Sea Limited",
-            regex=True,
-        )
     )
 
     # standardize nationality
