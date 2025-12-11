@@ -186,19 +186,13 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               "Johnjohn RRR Pte. Ltd.",
               regex=True
           )
-        # Sea Group -> Sea Limited
-          .str.replace(
-              r"(?i)^sea group$",
-              "Sea Limited",
-              regex=True
-          )
-        # Sea -> Sea Limited
-          .str.replace(
-              r"(?i)^sea$",
-              "Sea Limited",
-              regex=True,
-         )
     )
+
+    # --- Force Sea / Sea Group to Sea Limited (super robust) ---
+    company_norm = df["Company Full Name"].astype(str).str.strip().str.lower()
+
+    df.loc[company_norm.isin(["sea", "sea group"]), "Company Full Name"] = "Sea Limited"
+
 
     # standardize nationality
     nat_map = {
