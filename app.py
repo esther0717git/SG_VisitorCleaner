@@ -104,7 +104,7 @@ def nationality_group(row):
     pr  = str(row["PR"]).strip().lower()
     if nat == "singapore":
         return 1
-    elif pr in ("yes","y","pr"):
+    elif pr in ("yes", "y", "pr"):
         return 2
     elif nat == "malaysia":
         return 3
@@ -124,7 +124,7 @@ def clean_gender(g):
     v = str(g).strip().upper()
     if v == "M": return "Male"
     if v == "F": return "Female"
-    if v in ("MALE","FEMALE"): return v.title()
+    if v in ("MALE", "FEMALE"): return v.title()
     return v
 
 def normalize_pr(value):
@@ -137,8 +137,13 @@ def normalize_pr(value):
         return val.upper() if val.isalpha() else val
 
 def normalize_company(value):
-    val = str(value).strip().lower()
-    
+    """
+    If Sea , sea , Sea Group , SEA GROUP , SEA → return 'Sea Limited'.
+    Otherwise, leave the string as-is (after smart_title_case).
+    """
+    val = str(value).strip()
+    low = val.lower()
+
     sea_variants = {
         "sea",
         "sea group",
@@ -147,10 +152,9 @@ def normalize_company(value):
         "sea.",
     }
 
-    if val in sea_variants:
+    if low in sea_variants:
         return "Sea Limited"
-    else:
-        return val.upper() if val.isalpha() else val
+    return val
 
 
 def safe_str(cell):
@@ -174,7 +178,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
           .astype(str)
           .str.strip()
           .apply(smart_title_case)
-          .apply(normalize_company)     # ← INSERT HERE
+          .apply(normalize_company)     # ensure Sea / Sea Group → Sea Limited
           # Title-case any text inside parentheses: (logistics) -> (Logistics)
           .str.replace(r"\(([^)]+)\)", lambda m: f"({m.group(1).title()})", regex=True)
           # Force specific acronyms like MFI
@@ -481,11 +485,12 @@ if uploaded:
 
     company_cell = raw_df.iloc[0, 2]
 
-    company = (
-        smart_title_case(str(company_cell).strip())
-        if pd.notna(company_cell) and str(company_cell).strip()
-        else "VisitorList"
-    )
+    if pd.notna(company_cell) and str(company_cell).strip():
+        # First title-case, then normalize to Sea Limited if applicable
+        base_name = smart_title_case(str(company_cell).strip())
+        company = normalize_company(base_name)
+    else:
+        company = "VisitorList"
 
     cleaned = clean_data(raw_df)
     out_buf = generate_visitor_only(cleaned, uploaded)  # pass uploaded file
