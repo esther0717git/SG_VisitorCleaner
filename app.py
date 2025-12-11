@@ -172,35 +172,33 @@ df["Company Full Name"] = (
         .str.replace(
             r"(?i)^atlas m[&e]+ services pte\.? ltd\.?$",
             "Atlas M&E Services Pte Ltd",
-            regex=True
+            regex=True,
         )
         # CloudEngine Digital
         .str.replace(
             r"(?i)^cloudengine digital pte\.? ltd\.?$",
             "Cloudengine Digital Pte Ltd",
-            regex=True
+            regex=True,
         )
         # Johnjohn RRR
         .str.replace(
             r"(?i)^johnjohn r+r+ pte\.? ltd\.?$",
             "Johnjohn RRR Pte. Ltd.",
-            regex=True
+            regex=True,
+        )
+        # Sea Group → Sea Limited
+        .str.replace(
+            r"(?i)^sea group$",
+            "Sea Limited",
+            regex=True,
+        )
+        # Sea → Sea Limited
+        .str.replace(
+            r"(?i)^sea$",
+            "Sea Limited",
+            regex=True,
         )
 )
-
-# ------------------------------------------------------------------
-# ⭐ SUPER-RELIABLE Sea → Sea Limited handling
-# ------------------------------------------------------------------
-
-# Create a lowercase trimmed helper column
-company_norm = df["Company Full Name"].str.strip().str.lower()
-
-# Sea Group → Sea Limited
-df.loc[company_norm == "sea group", "Company Full Name"] = "Sea Limited"
-
-# Sea → Sea Limited
-df.loc[company_norm == "sea", "Company Full Name"] = "Sea Limited"
-
 
 
     # standardize nationality
