@@ -165,41 +165,40 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
           .str.replace(r"\bPte\s+Ltd\b", "Pte Ltd", flags=re.IGNORECASE, regex=True)
     )
 
-# --- Apply manual company name corrections (case-insensitive) ---
-df["Company Full Name"] = (
-    df["Company Full Name"]
-        # Atlas M&E Services
-        .str.replace(
-            r"(?i)^atlas m[&e]+ services pte\.? ltd\.?$",
-            "Atlas M&E Services Pte Ltd",
-            regex=True,
-        )
-        # CloudEngine Digital
-        .str.replace(
-            r"(?i)^cloudengine digital pte\.? ltd\.?$",
-            "Cloudengine Digital Pte Ltd",
-            regex=True,
-        )
-        # Johnjohn RRR
-        .str.replace(
-            r"(?i)^johnjohn r+r+ pte\.? ltd\.?$",
-            "Johnjohn RRR Pte. Ltd.",
-            regex=True,
-        )
-        # Sea Group → Sea Limited
-        .str.replace(
-            r"(?i)^sea group$",
-            "Sea Limited",
-            regex=True,
-        )
-        # Sea → Sea Limited
-        .str.replace(
-            r"(?i)^sea$",
-            "Sea Limited",
-            regex=True,
-        )
-)
-
+    # --- Apply manual company name corrections (case-insensitive) ---
+    df["Company Full Name"] = (
+        df["Company Full Name"]
+            # Atlas M&E Services
+            .str.replace(
+                r"(?i)^atlas m[&e]+ services pte\.? ltd\.?$",
+                "Atlas M&E Services Pte Ltd",
+                regex=True,
+            )
+            # CloudEngine Digital
+            .str.replace(
+                r"(?i)^cloudengine digital pte\.? ltd\.?$",
+                "Cloudengine Digital Pte Ltd",
+                regex=True,
+            )
+            # Johnjohn RRR
+            .str.replace(
+                r"(?i)^johnjohn r+r+ pte\.? ltd\.?$",
+                "Johnjohn RRR Pte. Ltd.",
+                regex=True,
+            )
+            # Sea Group → Sea Limited
+            .str.replace(
+                r"(?i)^sea group$",
+                "Sea Limited",
+                regex=True,
+            )
+            # Sea → Sea Limited
+            .str.replace(
+                r"(?i)^sea$",
+                "Sea Limited",
+                regex=True,
+            )
+    )
 
     # standardize nationality
     nat_map = {
