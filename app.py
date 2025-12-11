@@ -186,18 +186,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               "Johnjohn RRR Pte. Ltd.",
               regex=True
           )
-        # ✅ Sea → Sea Limited
-          .str.replace(
-              r"(?i)^sea group$",
-              "Sea Limited",
-              regex=True
-          )
-          .str.replace(
-              r"(?i)^sea$",
-              "Sea Limited",
-              regex=True
-          )
-    )
+        # Convert "Sea" → "Sea Limited"
+        .str.replace(r"(?i)^sea$", "Sea Limited", regex=True)
+        # Convert "Sea Group" → "Sea Limited"
+        .str.replace(r"(?i)^sea group$", "Sea Limited", regex=True)
+)
 
     # standardize nationality
     nat_map = {
