@@ -170,7 +170,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         df["Company Full Name"]
           # Sea / Sea Group → Sea Limited
           .str.replace(
-              r"(?i)^sea(\s+group)?$",
+              r"(?i)^sea\s+group$"
               "Sea Limited",
               regex=True
           )        
