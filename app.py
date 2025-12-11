@@ -5,8 +5,10 @@ import numpy as np  # add at top
 from io import BytesIO
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
+from openpyxl.utils.dataframe import dataframe_to_rows   # ✅ NEW
 
 
 # ───── Streamlit setup ────────────────────────────────────────────────────────
@@ -52,8 +54,6 @@ st.download_button(
 # ───── 4) Estimate Clearance Date ───────────────────────────────────────────────
 now = datetime.now(ZoneInfo("Asia/Singapore"))
 formatted_now = now.strftime("%A %d %B, %I:%M%p").lstrip("0")
-#st.markdown("### 🗓️ Estimate Clearance Date 🍍")
-
 
 # The Today timestamp:
 st.write("**Today:**", formatted_now)
@@ -84,17 +84,6 @@ if st.button("▶️ Earliest clearance:"):
 uploaded = st.file_uploader("📁 Upload file", type=["xlsx"])
 
 # ───── Helper Functions ────────────────────────────────────────────────────────
-
-#def smart_title_case(name):
-#    words = name.strip().split()
-#    cleaned = []
-#    for w in words:
-#        if len(w) <= 2 and w.isupper():  # treat short uppercase as acronyms
-#            cleaned.append(w)
-#        else:
-#            cleaned.append(w.capitalize())
-#    return " ".join(cleaned)
-
 
 def smart_title_case(name):
     words = name.strip().split()
@@ -162,83 +151,58 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     ]
     df = df.dropna(subset=df.columns[3:13], how="all")
 
-    # normalize company # Capitalize each word + fix Pte Ltd formatting
-    # df["Company Full Name"] = (
-    # df["Company Full Name"]
-    #   .astype(str)
-    #   .apply(smart_title_case)
-    #   .str.replace(r"\bPte\s+Ltd\b", "Pte Ltd", flags=re.IGNORECASE, regex=True)
-    # )
-
-    # normalize company # Capitalize each word + fix Pte Ltd formatting
-    #df["Company Full Name"] = (
-    #df["Company Full Name"]
-    #  .astype(str)
-    #  .str.strip()
-    #  .apply(smart_title_case)
-    #  # Title-case any text inside parentheses: (logistics) -> (Logistics)
-    #  .str.replace(r"\(([^)]+)\)", lambda m: f"({m.group(1).title()})", regex=True)
-    #  # Force the acronym MFI, regardless of input casing
-    #  .str.replace(r"\bMfi\b", "MFI", flags=re.IGNORECASE, regex=True)
-    #  # Keep consistent "Pte Ltd"
-    #  .str.replace(r"\bPte\s+Ltd\b", "Pte Ltd", flags=re.IGNORECASE, regex=True)
-   # )
-
     # --- Company name normalization ---
     df["Company Full Name"] = (
-    df["Company Full Name"]
-      .astype(str)
-      .str.strip()
-      .apply(smart_title_case)
-      # Title-case any text inside parentheses: (logistics) -> (Logistics)
-      .str.replace(r"\(([^)]+)\)", lambda m: f"({m.group(1).title()})", regex=True)
-      # Force specific acronyms like MFI
-      .str.replace(r"\bMfi\b", "MFI", flags=re.IGNORECASE, regex=True)
-      # Keep consistent "Pte Ltd"
-      .str.replace(r"\bPte\s+Ltd\b", "Pte Ltd", flags=re.IGNORECASE, regex=True)
+        df["Company Full Name"]
+          .astype(str)
+          .str.strip()
+          .apply(smart_title_case)
+          # Title-case any text inside parentheses: (logistics) -> (Logistics)
+          .str.replace(r"\(([^)]+)\)", lambda m: f"({m.group(1).title()})", regex=True)
+          # Force specific acronyms like MFI
+          .str.replace(r"\bMfi\b", "MFI", flags=re.IGNORECASE, regex=True)
+          # Keep consistent "Pte Ltd"
+          .str.replace(r"\bPte\s+Ltd\b", "Pte Ltd", flags=re.IGNORECASE, regex=True)
     )
 
-# --- Apply manual company name corrections (case-insensitive) ---
+    # --- Apply manual company name corrections (case-insensitive) ---
     df["Company Full Name"] = (
-    df["Company Full Name"]
-      # Atlas M&E Services
-      .str.replace(
-          r"(?i)^atlas m[&e]+ services pte\.? ltd\.?$",
-          "Atlas M&E Services Pte Ltd",
-          regex=True
-      )
-      # CloudEngine Digital
-      .str.replace(
-          r"(?i)^cloudengine digital pte\.? ltd\.?$",
-          "Cloudengine Digital Pte Ltd",
-          regex=True
-      )
-      # Johnjohn RRR
-      .str.replace(
-          r"(?i)^johnjohn r+r+ pte\.? ltd\.?$",
-          "Johnjohn RRR Pte. Ltd.",
-          regex=True
-      )
+        df["Company Full Name"]
+          # Atlas M&E Services
+          .str.replace(
+              r"(?i)^atlas m[&e]+ services pte\.? ltd\.?$",
+              "Atlas M&E Services Pte Ltd",
+              regex=True
+          )
+          # CloudEngine Digital
+          .str.replace(
+              r"(?i)^cloudengine digital pte\.? ltd\.?$",
+              "Cloudengine Digital Pte Ltd",
+              regex=True
+          )
+          # Johnjohn RRR
+          .str.replace(
+              r"(?i)^johnjohn r+r+ pte\.? ltd\.?$",
+              "Johnjohn RRR Pte. Ltd.",
+              regex=True
+          )
     )
 
-
-#----------------------------------------------------------------------------------------------------------#
     # standardize nationality
-    nat_map = {"chinese":"China","singaporean":"Singapore","malaysian":"Malaysia","indian":"India"}
     nat_map = {
-    "chinese": "China",
-    "singaporean": "Singapore",
-    "malaysian": "Malaysia",
-    "indian": "India",
-    "bangladeshi": "Bangladesh",
-    "british": "United Kingdom",
-    "uk": "United Kingdom",
-    "england": "United Kingdom",
-    "us": "United States",
-    "usa": "United States",
-    "u.s.": "United States",
-    "u.s.a.": "United States"
-}
+        "chinese": "China",
+        "singaporean": "Singapore",
+        "malaysian": "Malaysia",
+        "indian": "India",
+        "bangladeshi": "Bangladesh",
+        "british": "United Kingdom",
+        "uk": "United Kingdom",
+        "england": "United Kingdom",
+        "us": "United States",
+        "usa": "United States",
+        "u.s.": "United States",
+        "u.s.a.": "United States"
+    }
 
     df["Nationality (Country Name)"] = (
         df["Nationality (Country Name)"]
@@ -268,23 +232,17 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
           .apply(lambda v: "FIN" if v.lower() == "fin" else v.upper())
     )
 
-
     # Clean vehicle plate numbers
     df["Vehicle Plate Number"] = (
-    df["Vehicle Plate Number"]
-      .astype(str)
-      .str.strip()
-      .str.upper()
-      .replace({r"(?i)^nan$": "", r"(?i)^nil$": ""}, regex=True)
-      .str.replace(r"[\/;]", ",", regex=True)     # ✅ convert ; or / to commas
-      .str.replace(r"\s*,\s*", ",", regex=True)   # remove extra spaces around commas
-      .str.replace(r"\s+", "", regex=True)
+        df["Vehicle Plate Number"]
+          .astype(str)
+          .str.strip()
+          .str.upper()
+          .replace({r"(?i)^nan$": "", r"(?i)^nil$": ""}, regex=True)
+          .str.replace(r"[\/;]", ",", regex=True)     # convert ; or / to commas
+          .str.replace(r"\s*,\s*", ",", regex=True)   # remove extra spaces around commas
+          .str.replace(r"\s+", "", regex=True)
     )
-
-    # split names
-    #df["Full Name As Per NRIC"] = df["Full Name As Per NRIC"].astype(str).str.title()
-    #df[["First Name as per NRIC","Middle and Last Name as per NRIC"]] = (
-    #    df["Full Name As Per NRIC"].apply(split_name) )
 
     # ---------------- Split Names (enhanced & safe) ----------------
     # Normalize spacing/casing first
@@ -302,20 +260,18 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df["Middle and Last Name as per NRIC"] = parts[1].fillna(parts[0])
     # ---------------------------------------------------------------
 
-
     # swap IC/WP if needed
     iccol, wpcol = "IC (Last 3 digits and suffix) 123A", "Work Permit Expiry Date"
     if df[iccol].astype(str).str.contains("-", na=False).any():
         df[[iccol, wpcol]] = df[[wpcol, iccol]]
-    #df[iccol] = df[iccol].astype(str).str[-4:]
-    df[iccol] = (
-    df[iccol]
-      .astype(str)
-      .str.replace(r"\s+", "", regex=True)  # ignore spaces
-      .str[-4:]
-      .str.upper()
-)
 
+    df[iccol] = (
+        df[iccol]
+          .astype(str)
+          .str.replace(r"\s+", "", regex=True)  # ignore spaces
+          .str[-4:]
+          .str.upper()
+    )
 
     # clean mobile
     def fix_mobile(x):
@@ -332,230 +288,189 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df[wpcol] = pd.to_datetime(df[wpcol], errors="coerce").dt.strftime("%Y-%m-%d")
 
     return df
-   
-def generate_visitor_only(df: pd.DataFrame) -> BytesIO:
+
+
+# ───── Generate Excel while keeping ALL sheets (no ExcelWriter) ───────────────
+def generate_visitor_only(df: pd.DataFrame, uploaded_file) -> BytesIO:
     buf = BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Visitor List")
-        ws = writer.sheets["Visitor List"]
 
-        header_fill  = PatternFill("solid", fgColor="94B455")
-        warning_fill = PatternFill("solid", fgColor="DA9694")  # existing "red"
-        border       = Border(*[Side("thin")]*4)
-        center       = Alignment("center","center")
-        normal_font  = Font(name="Calibri", size=9)
-        bold_font    = Font(name="Calibri", size=9, bold=True)
-        expired_fill = warning_fill                             # alias for clarity
-        soon_fill    = PatternFill("solid", fgColor="F9CB9C")   # orange for <1 month
+    # Load original workbook so all other sheets are preserved
+    uploaded_file.seek(0)  # reset pointer after pd.read_excel
+    wb = load_workbook(uploaded_file)
 
+    # Get or create Visitor List sheet
+    if "Visitor List" in wb.sheetnames:
+        ws = wb["Visitor List"]
+        # Clear existing contents
+        ws.delete_rows(1, ws.max_row)
+    else:
+        ws = wb.create_sheet("Visitor List")
 
-        
-        # style all cells
-        for row in ws.iter_rows():
-            for cell in row:
-                cell.border    = border
-                cell.alignment = center
-                cell.font      = normal_font
+    # Write DataFrame to sheet
+    for row in dataframe_to_rows(df, index=False, header=True):
+        ws.append(row)
 
-        # header row
-        for col in range(1, ws.max_column + 1):
-            h = ws[f"{get_column_letter(col)}1"]
-            h.fill = header_fill
-            h.font = bold_font
-        ws.freeze_panes = "B2"
+    # === Everything below is your existing styling / validation on ws ===
 
-        errors = 0
-        seen = {}                    # ← initialize duplicate‐tracker
+    header_fill  = PatternFill("solid", fgColor="94B455")
+    warning_fill = PatternFill("solid", fgColor="DA9694")  # existing "red"
+    border       = Border(*[Side("thin")]*4)
+    center       = Alignment("center","center")
+    normal_font  = Font(name="Calibri", size=9)
+    bold_font    = Font(name="Calibri", size=9, bold=True)
+    expired_fill = warning_fill                             # alias for clarity
+    soon_fill    = PatternFill("solid", fgColor="F9CB9C")   # orange for <1 month
 
-        for r in range(2, ws.max_row + 1):
-            # pull values
-            idt = str(ws[f"G{r}"].value).strip().upper()
-            nat = str(ws[f"J{r}"].value).strip().title()
-            pr  = str(ws[f"K{r}"].value).strip().lower()
-            wpd = str(ws[f"I{r}"].value).strip()
-            name = str(ws[f"D{r}"].value or "").strip()   # ← grab “Full Name” from col D
+    # style all cells
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.border    = border
+            cell.alignment = center
+            cell.font      = normal_font
 
-            bad = False
+    # header row
+    for col in range(1, ws.max_column + 1):
+        h = ws[f"{get_column_letter(col)}1"]
+        h.fill = header_fill
+        h.font = bold_font
+    ws.freeze_panes = "B2"
 
-             #─── highlight if expiry date is today or past ─────────────
-            #expiry_str = str(ws[f"I{r}"].value).strip()
-            #try:
-            #    expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-            #    if expiry_date <= datetime.now(ZoneInfo("Asia/Singapore")).date():
-            #        for col in range(1, ws.max_column + 1):
-            #            ws[f"I{r}"].fill = warning_fill
-            #            #ws[f"{get_column_letter(col)}{r}"].fill = warning_fill
-            #        errors += 1
-            #except ValueError:
-            #    pass  # skip if not a valid date
+    errors = 0
+    seen = {}                    # duplicate‐tracker
 
-            # ─── highlight if expiry date is expired OR within 1 month ───
-            #expiry_str = str(ws[f"I{r}"].value).strip()
-            
-            #try:
-            #    expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-            #    today_sg = datetime.now(ZoneInfo("Asia/Singapore")).date()
-            #    cutoff = today_sg + timedelta(days=30)  # ≈ 1 month ahead
-            
-            #    if expiry_date <= cutoff:
-            #        # highlight just the expiry date cell
-            #        ws[f"I{r}"].fill = warning_fill
-            #        errors += 1
-            
-            #except ValueError:
-            #    # skip if not a valid date string
-            #    pass
-                
-            # ─── highlight expiry: red if expired, orange if ≤30 days ahead ───
-            #expiry_str = safe_str(ws[f"I{r}"].value)
-            expiry_str = str(ws[f"I{r}"].value).strip()
-            try:
-                expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-                today_sg = datetime.now(ZoneInfo("Asia/Singapore")).date()
-                cutoff = today_sg + timedelta(days=30)
-            
-                if expiry_date < today_sg:
-                    # already expired → red (same as your existing warning_fill)
-                    ws[f"I{r}"].fill = expired_fill
-                    errors += 1
-                elif expiry_date <= cutoff:
-                    # expiring within 1 month → orange (#f9cb9c)
-                    ws[f"I{r}"].fill = soon_fill
-                    errors += 1
-            
-            except ValueError:
-                # skip if not a valid date string
-                pass
-    
-            # ─── highlight if expiry date is expired OR within 6 months ───
-            #expiry_str = str(ws[f"I{r}"].value).strip()
-            #try:
-            #    expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-            #    today_sg = datetime.now(ZoneInfo("Asia/Singapore")).date()
-            #    six_months_ahead = today_sg + timedelta(days=180)  # ≈ 6 months
-           
-           #     # Note: <= six_months_ahead already covers "expired" as well
-           #     if expiry_date <= six_months_ahead:
-           #         # highlight just the expiry cell:
-           #         ws[f"I{r}"].fill = warning_fill
-           #         errors += 1
-           
-                    # If you'd rather highlight the whole row, replace the line above with:
-                    # for c in range(1, ws.max_column + 1):
-                    #     ws[f"{get_column_letter(c)}{r}"].fill = warning_fill
-           
-         #   except ValueError:
-         #       pass  # skip if not a valid date
+    for r in range(2, ws.max_row + 1):
+        # pull values
+        idt = str(ws[f"G{r}"].value).strip().upper()
+        nat = str(ws[f"J{r}"].value).strip().title()
+        pr  = str(ws[f"K{r}"].value).strip().lower()
+        wpd = str(ws[f"I{r}"].value).strip()
+        name = str(ws[f"D{r}"].value or "").strip()   # “Full Name” from col D
 
+        bad = False
 
-            # ── NEW RULE: Singaporeans cannot be PR ────────────────────────────
-            if nat == "Singapore" and pr == "pr":
-                bad = True
-           
-            if idt != "NRIC" and pr == "pr": bad = True
-            if idt == "FIN" and (nat == "Singapore" or pr == "pr"): bad = True
-            if idt == "NRIC" and not (nat == "Singapore" or pr == "pr"): bad = True
-            if idt == "FIN" and not wpd: bad = True
-            if idt == "WP" and not wpd: bad = True
+        # ─── highlight expiry: red if expired, orange if ≤30 days ahead ───
+        expiry_str = str(ws[f"I{r}"].value).strip()
+        try:
+            expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+            today_sg = datetime.now(ZoneInfo("Asia/Singapore")).date()
+            cutoff = today_sg + timedelta(days=30)
 
-            if bad:
-             # highlight the offending cells
-                for col in ("G","J","K","I"):
-                    ws[f"{col}{r}"].fill = warning_fill
+            if expiry_date < today_sg:
+                # already expired → red
+                ws[f"I{r}"].fill = expired_fill
+                errors += 1
+            elif expiry_date <= cutoff:
+                # expiring within 1 month → orange (#f9cb9c)
+                ws[f"I{r}"].fill = soon_fill
                 errors += 1
 
-            # ─── duplicate‐check on column D ──────────────────────────
-            if name:
-                if name in seen:
-                    # highlight both the old row and the new row
-                    ws[f"D{r}"].fill = warning_fill
-                    ws[f"D{seen[name]}"].fill = warning_fill
-                    errors += 1
-                else:
-                    seen[name] = r
+        except ValueError:
+            # skip if not a valid date string
+            pass
 
-        if errors:
-            st.warning(f"⚠️ {errors} validation error(s) found.")
-       
-        # Set fixed column widths
-        column_widths = {
-            "A": 3.38,
-            "C": 23.06,
-            "D": 17.25,
-            "E": 17.63,
-            "F": 26.25,
-            "G": 13.94,
-            "H": 24.06,
-            "I": 18.38,
-            "J": 20.31,
-            "K": 4,
-            "L": 5.81,
-            "M": 11.5,
-        }
-        # B is dynamic (auto-fit based on max content)
-        for col in ws.columns:
-            col_letter = get_column_letter(col[0].column)
-            if col_letter == "B":
-                width = max(len(str(cell.value)) for cell in col if cell.value)
-                ws.column_dimensions[col_letter].width = width
-            elif col_letter in column_widths:
-                ws.column_dimensions[col_letter].width = column_widths[col_letter]
-       
-        for row in ws.iter_rows():
-            ws.row_dimensions[row[0].row].height = 16.8
+        # ── NEW RULE: Singaporeans cannot be PR ────────────────────────────
+        if nat == "Singapore" and pr == "pr":
+            bad = True
 
-        # vehicles summary
-        plates = []
-        for v in df["Vehicle Plate Number"].dropna():
-            plates += [x.strip() for x in str(v).split(";") if x.strip()]
-        ins = ws.max_row + 2
-        if plates:
-            ws[f"B{ins}"].value = "Vehicles"
-            ws[f"B{ins}"].font = Font(size=9)
-            ws[f"B{ins}"].border = border
-            ws[f"B{ins}"].alignment = center
+        if idt != "NRIC" and pr == "pr": bad = True
+        if idt == "FIN" and (nat == "Singapore" or pr == "pr"): bad = True
+        if idt == "NRIC" and not (nat == "Singapore" or pr == "pr"): bad = True
+        if idt == "FIN" and not wpd: bad = True
+        if idt == "WP" and not wpd: bad = True
 
-            ws[f"B{ins+1}"].value = ",".join(sorted(set(plates)))
-            ws[f"B{ins+1}"].font = Font(size=9)
-            ws[f"B{ins+1}"].border = border
-            ws[f"B{ins+1}"].alignment = center
-            ins += 2
+        if bad:
+            # highlight the offending cells
+            for col in ("G","J","K","I"):
+                ws[f"{col}{r}"].fill = warning_fill
+            errors += 1
 
-        ws[f"B{ins}"].value = "Total Visitors"
+        # ─── duplicate‐check on column D ──────────────────────────
+        if name:
+            if name in seen:
+                # highlight both the old row and the new row
+                ws[f"D{r}"].fill = warning_fill
+                ws[f"D{seen[name]}"].fill = warning_fill
+                errors += 1
+            else:
+                seen[name] = r
+
+    if errors:
+        st.warning(f"⚠️ {errors} validation error(s) found.")
+
+    # Set fixed column widths
+    column_widths = {
+        "A": 3.38,
+        "C": 23.06,
+        "D": 17.25,
+        "E": 17.63,
+        "F": 26.25,
+        "G": 13.94,
+        "H": 24.06,
+        "I": 18.38,
+        "J": 20.31,
+        "K": 4,
+        "L": 5.81,
+        "M": 11.5,
+    }
+    # B is dynamic (auto-fit based on max content)
+    for col in ws.columns:
+        col_letter = get_column_letter(col[0].column)
+        if col_letter == "B":
+            width = max(len(str(cell.value)) for cell in col if cell.value)
+            ws.column_dimensions[col_letter].width = width
+        elif col_letter in column_widths:
+            ws.column_dimensions[col_letter].width = column_widths[col_letter]
+
+    for row in ws.iter_rows():
+        ws.row_dimensions[row[0].row].height = 16.8
+
+    # vehicles summary
+    plates = []
+    for v in df["Vehicle Plate Number"].dropna():
+        plates += [x.strip() for x in str(v).split(";") if x.strip()]
+    ins = ws.max_row + 2
+    if plates:
+        ws[f"B{ins}"].value = "Vehicles"
         ws[f"B{ins}"].font = Font(size=9)
         ws[f"B{ins}"].border = border
         ws[f"B{ins}"].alignment = center
 
-        ws[f"B{ins+1}"].value = df["Company Full Name"].notna().sum()
+        ws[f"B{ins+1}"].value = ",".join(sorted(set(plates)))
         ws[f"B{ins+1}"].font = Font(size=9)
         ws[f"B{ins+1}"].border = border
         ws[f"B{ins+1}"].alignment = center
+        ins += 2
 
+    ws[f"B{ins}"].value = "Total Visitors"
+    ws[f"B{ins}"].font = Font(size=9)
+    ws[f"B{ins}"].border = border
+    ws[f"B{ins}"].alignment = center
+
+    ws[f"B{ins+1}"].value = df["Company Full Name"].notna().sum()
+    ws[f"B{ins+1}"].font = Font(size=9)
+    ws[f"B{ins+1}"].border = border
+    ws[f"B{ins+1}"].alignment = center
+
+    # Save full workbook (all sheets) to buffer
+    wb.save(buf)
     buf.seek(0)
     return buf
 
-   
+
 # ───── Read, Clean & Download ────────────────────────────────────────────────
 if uploaded:
     raw_df = pd.read_excel(uploaded, sheet_name="Visitor List")
 
-    
-   
     company_cell = raw_df.iloc[0, 2]
-    #company = (
-    #    str(company_cell).strip()
-    #    if pd.notna(company_cell) and str(company_cell).strip()
-    #    else "VisitorList"
-    #)
 
     company = (
-    smart_title_case(str(company_cell).strip())
-    if pd.notna(company_cell) and str(company_cell).strip()
-    else "VisitorList"
+        smart_title_case(str(company_cell).strip())
+        if pd.notna(company_cell) and str(company_cell).strip()
+        else "VisitorList"
     )
 
     cleaned = clean_data(raw_df)
-    out_buf = generate_visitor_only(cleaned)
+    out_buf = generate_visitor_only(cleaned, uploaded)  # pass uploaded file
 
     today_str = datetime.now(ZoneInfo("Asia/Singapore")).strftime("%Y%m%d")
     fname = f"{company}_{today_str}.xlsx"
@@ -570,7 +485,6 @@ if uploaded:
     st.caption(
         "✅ Your data has been validated. Please double-check critical fields before sharing with DC team."
     )
-    
 
 
 # ───── 5) Final Notice (always shown) ────────────────────────────────────────
@@ -588,7 +502,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
 
 # ───── 6) Vendor Accuracy Reminder (always shown) ────────────────────────────
 st.markdown(
