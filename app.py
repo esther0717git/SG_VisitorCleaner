@@ -187,11 +187,18 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               regex=True
           )
     )
+    
     st.write("DEBUG:", df["Company Full Name"].unique())
+    
+        # --- Final override: Sea / Sea Group -> Sea Limited ---
+    def fix_sea(name: str) -> str:
+        n = name.strip()
+        if n.lower() in ("sea", "sea group"):
+            return "Sea Limited"
+        return n
 
-    # --- Force Sea / Sea Group -> Sea Limited (no matter the casing) ---
-    company_norm = df["Company Full Name"].astype(str).str.strip().str.lower()
-    df.loc[company_norm.isin(["sea", "sea group"]), "Company Full Name"] = "Sea Limited"
+    df["Company Full Name"] = df["Company Full Name"].astype(str).apply(fix_sea)
+
 
     # standardize nationality
     nat_map = {
