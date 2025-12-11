@@ -187,7 +187,6 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               regex=True
           )
     )
-    
 
     # standardize nationality
     nat_map = {
