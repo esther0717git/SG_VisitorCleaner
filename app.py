@@ -394,9 +394,10 @@ def generate_visitor_only(df: pd.DataFrame, uploaded_file) -> BytesIO:
                 ws[f"{col}{r}"].fill = warning_fill
             errors += 1
             
-        # ─── NEW RULE: Column H must not be empty ───────────────────────────
-        h_val = safe_str(ws[f"H{r}"].value)
-        if not h_val:
+        # ─── RULE: Column H must not be empty / NaN ─────────────────────────
+        h_cell = ws[f"H{r}"].value
+
+        if h_cell is None or str(h_cell).strip().lower() in ("", "nan"):
             ws[f"H{r}"].fill = warning_fill
             errors += 1
             
