@@ -393,7 +393,13 @@ def generate_visitor_only(df: pd.DataFrame, uploaded_file) -> BytesIO:
             for col in ("G","J","K","I"):
                 ws[f"{col}{r}"].fill = warning_fill
             errors += 1
-
+            
+        # ─── NEW RULE: Column H must not be empty ───────────────────────────
+        h_val = safe_str(ws[f"H{r}"].value)
+        if not h_val:
+            ws[f"H{r}"].fill = warning_fill
+            errors += 1
+            
         # ─── duplicate‐check on column D ──────────────────────────
         if name:
             if name in seen:
