@@ -196,6 +196,12 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
               "Johnjohn RRR Pte. Ltd.",
               regex=True
           )
+        # Yi-ke Innovations
+        .str.replace(
+            r"(?i)^yike$",
+            "Yi-ke Innovations Pte Ltd",
+            regex=True
+        )
     )
 
     # standardize nationality
