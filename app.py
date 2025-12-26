@@ -85,6 +85,35 @@ uploaded = st.file_uploader("📁 Upload file", type=["xlsx"])
 
 # ───── Helper Functions ────────────────────────────────────────────────────────
 
+def normalize_date_cell(x):
+    s = str(x).strip()
+    if s == "" or s.lower() in ("nan", "none", "nil"):
+        return ""
+
+    # Already a datetime/date from Excel
+    if hasattr(x, "strftime"):
+        return x.strftime("%Y-%m-%d")
+
+    # Try common explicit formats first
+    fmts = [
+        "%Y-%m-%d",  # 2025-12-31
+        "%d/%m/%Y",  # 31/12/2025
+        "%d-%m-%Y",  # 31-12-2025
+        "%d.%m.%Y",  # 31.12.2025
+        "%m/%d/%Y",  # 12/31/2025 (some vendors)
+        "%Y/%m/%d",  # 2025/12/31
+    ]
+    for f in fmts:
+        try:
+            return datetime.strptime(s, f).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Last resort: pandas flexible parsing
+    dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
+    return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
+
+
 def smart_title_case(name):
     words = name.strip().split()
     cleaned = []
@@ -301,7 +330,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df["Mobile Number"] = df["Mobile Number"].apply(fix_mobile)
 
     df["Gender"] = df["Gender"].apply(clean_gender)
-    df[wpcol] = pd.to_datetime(df[wpcol], errors="coerce").dt.strftime("%Y-%m-%d")
+    #df[wpcol] = pd.to_datetime(df[wpcol], errors="coerce").dt.strftime("%Y-%m-%d")
+    parsed = pd.to_datetime(df[wpcol], errors="coerce", dayfirst=True)
+    df[wpcol] = np.where(parsed.isna(), df[wpcol].astype(str).str.strip(), parsed.dt.strftime("%Y-%m-%d"))
+
+
 
     return df
 
