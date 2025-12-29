@@ -273,7 +273,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         # Yi-ke Innovations
         .str.replace(
             r"(?i)^yike$",
-            "Yi-ke Innovations Pte Ltd",
+            "Yi-Ke Innovations Pte Ltd",
             regex=True
         )
     )
