@@ -85,10 +85,50 @@ uploaded = st.file_uploader("📁 Upload file", type=["xlsx"])
 
 # ───── Helper Functions ────────────────────────────────────────────────────────
 
+#def normalize_date_cell(x):
+#    # empty-ish
+#    if x is None or (isinstance(x, float) and np.isnan(x)):
+#        return ""
+#    s = str(x).strip()
+#    if s == "" or s.lower() in ("nan", "none", "nil"):
+#        return ""
+
+    # If Excel already gave a datetime/date object
+#    if hasattr(x, "strftime"):
+#        return x.strftime("%Y-%m-%d")
+
+    # ✅ Handle Excel serial dates (e.g. 45123 or "45123")
+    # Excel serials are days since 1899-12-30 (pandas origin that accounts for Excel quirks)
+#    if isinstance(x, (int, float, np.integer, np.floating)):
+#        # ignore tiny numbers (could be junk)
+#        if x >= 20000:  # ~year 1954+, safe threshold
+#            dt = pd.to_datetime(x, unit="D", origin="1899-12-30", errors="coerce")
+#            return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
+
+#    if re.fullmatch(r"\d+(\.0)?", s):
+#        num = float(s)
+#        if num >= 20000:
+#            dt = pd.to_datetime(num, unit="D", origin="1899-12-30", errors="coerce")
+#            return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
+
+    # Try common explicit formats
+#    fmts = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y", "%Y/%m/%d"]
+#    for f in fmts:
+#        try:
+#            return datetime.strptime(s, f).strftime("%Y-%m-%d")
+#        except ValueError:
+#            pass
+
+    # Last resort (dayfirst=True helps with 08/09/2027 etc)
+#    dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
+#    return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
+
+
 def normalize_date_cell(x):
-    # empty-ish
-    if x is None or (isinstance(x, float) and np.isnan(x)):
+    # ✅ catch None/NaN/NaT early (NaT is the one crashing strftime)
+    if pd.isna(x):
         return ""
+
     s = str(x).strip()
     if s == "" or s.lower() in ("nan", "none", "nil"):
         return ""
@@ -97,11 +137,9 @@ def normalize_date_cell(x):
     if hasattr(x, "strftime"):
         return x.strftime("%Y-%m-%d")
 
-    # ✅ Handle Excel serial dates (e.g. 45123 or "45123")
-    # Excel serials are days since 1899-12-30 (pandas origin that accounts for Excel quirks)
+    # Excel serial dates
     if isinstance(x, (int, float, np.integer, np.floating)):
-        # ignore tiny numbers (could be junk)
-        if x >= 20000:  # ~year 1954+, safe threshold
+        if x >= 20000:
             dt = pd.to_datetime(x, unit="D", origin="1899-12-30", errors="coerce")
             return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
 
@@ -111,7 +149,6 @@ def normalize_date_cell(x):
             dt = pd.to_datetime(num, unit="D", origin="1899-12-30", errors="coerce")
             return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
 
-    # Try common explicit formats
     fmts = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%m/%d/%Y", "%Y/%m/%d"]
     for f in fmts:
         try:
@@ -119,10 +156,8 @@ def normalize_date_cell(x):
         except ValueError:
             pass
 
-    # Last resort (dayfirst=True helps with 08/09/2027 etc)
     dt = pd.to_datetime(s, errors="coerce", dayfirst=True)
     return "" if pd.isna(dt) else dt.strftime("%Y-%m-%d")
-
 
 def smart_title_case(name):
     words = name.strip().split()
