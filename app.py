@@ -488,13 +488,12 @@ def generate_visitor_only(df: pd.DataFrame, uploaded_file) -> BytesIO:
 
         # ─── RULE: Mobile Number must not be NA / empty ───────────────
         mobile_cell = ws[f"M{r}"].value
+        mobile_str = "" if mobile_cell is None else str(mobile_cell).strip().lower()
 
-        if (
-            mobile_cell is None or
-            str(mobile_cell).strip().lower() in ("", "na", "nan", "nil")
-        ):
+        if mobile_str in ("", "na", "nan", "nil", "00000000"):
             ws[f"M{r}"].fill = warning_fill
             errors += 1
+
 
         
         # ─── duplicate‐check on column D ──────────────────────────
