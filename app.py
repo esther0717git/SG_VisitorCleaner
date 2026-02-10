@@ -513,7 +513,7 @@ def generate_visitor_only(df: pd.DataFrame, uploaded_file) -> BytesIO:
     column_widths = {
         "A": 3.38,
         "C": 23.06,
-        "D": 20,
+        "D": 22,
         "E": 17.63,
         "F": 26.25,
         "G": 13.94,
